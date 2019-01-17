@@ -1,0 +1,80 @@
+%% Parabolic Problem Using Matrix Coefficients
+% Create finite element matrices that encode a parabolic problem, and solve
+% the problem.
+%%
+% The problem is the evolution of temperature in a conducting block. The
+% block is a rectangular slab.
+
+% Copyright 2015 The MathWorks, Inc.
+
+model = createpde(1);
+importGeometry(model,'Block.stl');
+handl = pdegplot(model,'FaceLabels','on');
+view(-42,24)
+handl(1).FaceAlpha = 0.5;
+%%
+% Faces 1, 4, and 6 of the slab are kept at 0 degrees. The other faces are
+% insulated. Include the boundary condition on faces 1, 4, and 6. You do
+% not need to include the boundary condition on the other faces because
+% the default condition is insulated.
+applyBoundaryCondition(model,'Face',[1,4,6],'u',0);
+%%
+% The initial temperature distribution in the block has the form
+%
+% $$u_0 = 10^{-3}xyz.$$
+generateMesh(model);
+p = model.Mesh.Nodes;
+x = p(1,:);
+y = p(2,:);
+z = p(3,:);
+u0 = x.*y.*z*1e-3;
+
+%%
+% The parabolic equation in toolbox syntax is
+%
+% $$d\frac{\partial u}{\partial t} - \nabla\cdot(c\nabla u) + au = f.$$
+%
+% Suppose the thermal conductivity of the block leads to a $c$ coefficient
+% value of 1. The values of the other coefficients in this problem are $d =
+% 1$, $a = 0$, and $f = 0$.
+d = 1;
+c = 1;
+a = 0;
+f = 0;
+%%
+% Create the finite element matrices that encode the problem.
+[Kc,Fc,B,ud] = assempde(model,c,a,f);
+[~,M,~] = assema(model,0,d,f);
+%%
+% Solve the problem at time steps of 1 for times ranging from 0 to 40.
+tlist = linspace(0,40,41);
+u = parabolic(u0,tlist,Kc,Fc,B,ud,M);
+%%
+% Plot the solution on the outside of the block at times 0, 10, 25, and 40.
+% Ensure that the coloring is the same for all plots.
+umin = min(min(u));
+umax = max(max(u));
+subplot(2,2,1)
+pdeplot3D(model,'colormapdata',u(:,1))
+colorbar off
+view(125,22)
+title 't = 0'
+caxis([umin umax]);
+subplot(2,2,2)
+pdeplot3D(model,'colormapdata',u(:,11))
+colorbar off
+view(125,22)
+title 't = 10'
+caxis([umin umax]);
+subplot(2,2,3)
+pdeplot3D(model,'colormapdata',u(:,26))
+colorbar off
+view(125,22)
+title 't = 25'
+caxis([umin umax]);
+subplot(2,2,4)
+pdeplot3D(model,'colormapdata',u(:,41))
+colorbar off
+view(125,22)
+title 't = 40'
+caxis([umin umax]);
